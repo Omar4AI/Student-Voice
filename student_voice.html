@@ -1,0 +1,219 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Student Voice</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+        }
+        header {
+            background-color: #4CAF50;
+            color: white;
+            padding: 1rem;
+            text-align: center;
+        }
+        nav {
+            display: flex;
+            justify-content: center;
+            background-color: #333;
+        }
+        nav a {
+            color: white;
+            text-decoration: none;
+            padding: 14px 20px;
+            display: block;
+        }
+        nav a:hover {
+            background-color: #575757;
+        }
+        .container {
+            padding: 2rem;
+            display: none; /* Initially hide all sections */
+        }
+        .form-group {
+            margin-bottom: 1rem;
+        }
+        .form-group label {
+            display: block;
+            margin-bottom: 0.5rem;
+        }
+        .form-group input, .form-group textarea, .form-group select {
+            width: 100%;
+            padding: 0.5rem;
+            margin-top: 0.3rem;
+        }
+        .form-group button {
+            background-color: #4CAF50;
+            color: white;
+            padding: 0.7rem;
+            border: none;
+            cursor: pointer;
+        }
+        .form-group button:hover {
+            background-color: #45a049;
+        }
+        footer {
+            background-color: #333;
+            color: white;
+            text-align: center;
+            padding: 1rem;
+            margin-top: 2rem;
+        }
+        .visible {
+            display: block !important;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>Student Voice</h1>
+        <p>Empowering students and staff to communicate effectively</p>
+    </header>
+    <nav>
+        <a href="#login">Login</a>
+        <a href="#submit" id="participant-link" style="display: none;">Submit a Problem</a>
+        <a href="#host" id="host-link" style="display: none;">Host Dashboard</a>
+    </nav>
+
+    <!-- Login Page -->
+    <div class="container visible" id="login">
+        <h2>Login</h2>
+        <form id="loginForm">
+            <div class="form-group">
+                <label for="email">Email:</label>
+                <input type="email" id="email" required>
+            </div>
+            <div class="form-group">
+                <label for="password">Password:</label>
+                <input type="password" id="password" required>
+            </div>
+            <div class="form-group">
+                <button type="submit">Login</button>
+            </div>
+        </form>
+    </div>
+
+    <!-- Participant Section -->
+    <div class="container" id="submit">
+        <h2>Submit a Problem</h2>
+        <form id="problemForm">
+            <div class="form-group">
+                <label for="name">Student Name:</label>
+                <input type="text" id="name" name="name" required>
+            </div>
+            <div class="form-group">
+                <label for="class">Class:</label>
+                <input type="text" id="class" name="class" required>
+            </div>
+            <div class="form-group">
+                <label for="category">Problem Category:</label>
+                <select id="category" name="category" required>
+                    <option value="bullying">Bullying</option>
+                    <option value="academic">Academic Issues</option>
+                    <option value="infrastructure">Infrastructure</option>
+                    <option value="other">Other</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="problem">Describe Your Problem:</label>
+                <textarea id="problem" name="problem" rows="4" required></textarea>
+            </div>
+            <div class="form-group">
+                <button type="submit">Submit</button>
+            </div>
+        </form>
+    </div>
+
+    <!-- Host Section -->
+    <div class="container" id="host">
+        <h2>Host Dashboard</h2>
+        <ul id="problemList">
+            <!-- Problems will be dynamically loaded here -->
+        </ul>
+    </div>
+
+    <footer>
+        <p>&copy; 2024 Student Voice. All rights reserved.</p>
+    </footer>
+
+    <script>
+        const API_BASE = "http://localhost:3000";
+
+        // Login Functionality
+        document.getElementById("loginForm").addEventListener("submit", async (e) => {
+            e.preventDefault();
+            const email = document.getElementById("email").value;
+            const password = document.getElementById("password").value;
+
+            const response = await fetch(`${API_BASE}/login`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ email, password }),
+            });
+
+            if (response.ok) {
+                const data = await response.json();
+                const role = data.role;
+
+                // Show appropriate sections based on role
+                if (role === "participant") {
+                    document.getElementById("submit").classList.add("visible");
+                    document.getElementById("participant-link").style.display = "block";
+                } else if (role === "host") {
+                    document.getElementById("host").classList.add("visible");
+                    document.getElementById("host-link").style.display = "block";
+                    loadProblems();
+                }
+
+                // Hide login
+                document.getElementById("login").classList.remove("visible");
+            } else {
+                alert("Invalid email or password");
+            }
+        });
+
+        // Submit Problem Functionality
+        document.getElementById("problemForm").addEventListener("submit", async (e) => {
+            e.preventDefault();
+            const formData = {
+                studentName: document.getElementById("name").value,
+                class: document.getElementById("class").value,
+                category: document.getElementById("category").value,
+                description: document.getElementById("problem").value,
+            };
+
+            const response = await fetch(`${API_BASE}/submit-problem`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(formData),
+            });
+
+            if (response.ok) {
+                alert("Problem submitted successfully!");
+                document.getElementById("problemForm").reset();
+            } else {
+                alert("Failed to submit problem");
+            }
+        });
+
+        // Load Problems for Host
+        async function loadProblems() {
+            const response = await fetch(`${API_BASE}/problems`);
+            if (response.ok) {
+                const problems = await response.json();
+                const problemList = document.getElementById("problemList");
+                problemList.innerHTML = problems.map(
+                    problem => `<li><strong>${problem.studentName}</strong> (${problem.class}): ${problem.description}</li>`
+                ).join("");
+            } else {
+                alert("Failed to load problems");
+            }
+        }
+    </script>
+</body>
+</html>
